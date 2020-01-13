@@ -1,11 +1,16 @@
 language: go
 go:
-  - 1.x
-  - "1.10"
   - 1.11.x
+  - 1.12.x
   - master
+os:
+  - linux
+env:
+  - GO111MODULE=on
+install:
+  - make build_tool
 script:
-  - go build github.com/ma6254/FictionDown/cmd/FictionDown
+  - make build
 notifications:
   email:
     recipients:

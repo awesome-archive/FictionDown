@@ -11,14 +11,23 @@
 [![QQ 群](https://img.shields.io/badge/qq%E7%BE%A4-934873832-orange.svg)](https://jq.qq.com/?_wv=1027&k=5bN0SVA)
 
 [![travis-ci](https://www.travis-ci.org/ma6254/FictionDown.svg?branch=master)](https://travis-ci.org/ma6254/FictionDown)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ma6254/FictionDown)](https://goreportcard.com/report/github.com/ma6254/FictionDown)
 
 ## 特性
 
 - 以起点为样本，多站点多线程爬取校对
 - 支持导出txt，以兼容大多数阅读器
-- 支持导出markdown，可以用pandoc转换成epub，保留书本信息、卷结构、作者信息
+- 支持导出epub(还有些问题，某些阅读器无法打开)
+- 支持导出markdown，可以用pandoc转换成epub，附带epub的`metadata`，保留书本信息、卷结构、作者信息
 - 内置简单的广告过滤（现在还不完善）
-- 用Golang编写，安装部署方便，外部依赖只有PhantomJS
+- 用Golang编写，安装部署方便，可选的外部依赖：PhantomJS、Chromedp
+- 支持断点续爬，强制结束再爬会在上次结束的地方继续
+
+## 使用注意
+
+- 起点和盗版站的页面可能随时更改，可能会使抓取匹配失效，如果失效请提issue
+- 生成的EPUB文件可能过大，市面上大多数阅读器会异常卡顿或者直接崩溃
+- 某些过于老的书或者作者频繁修改的书，盗版站都没有收录，也就无法爬取，如能找此书可用的盗版站请提issue，并写出书名和正版站链接、盗版站链接
 
 ## 使用流程
 
@@ -27,43 +36,98 @@
 3. 手动设置笔趣阁等盗版小说的对应链接，`tamp`字段
 4. 再次启动，开始爬取，只爬取VIP部分，并跟`Example`进行校对
 5. 手动编辑对应的缓存文件，手动删除广告和某些随机字符(有部分是关键字,可能会导致pandoc内存溢出或者样式错误)
-6. `d -f md`生成markwown
+6. `conv -f md`生成markwown
 7. 用pandoc转换成epub，`pandoc -o xxxx.epub xxxx.md`
 
 ### Example
 
 ```bash
 > ./FictionDown --url https://book.qidian.com/info/3249362 d # 获取正版信息
+
+# 有时会发生`not match volumes`的错误，请启用Chromedp或者PhantomJS
+# Use Chromedp
+> ./FictionDown --url https://book.qidian.com/info/3249362 -d chromedp d
+# Use PhantomJS
+> ./FictionDown --url https://book.qidian.com/info/3249362 -d phantomjs d
+
 > vim 一世之尊.FictionDown # 加入盗版小说链接
-> ./FictionDown -i 一世之尊.FictionDown d -f md # 获取盗版内容
+> ./FictionDown -i 一世之尊.FictionDown d # 获取盗版内容
+# 爬取完毕就可以输出可阅读的文档了
+> ./FictionDown -i 一世之尊.FictionDown conv -f txt
+# 转换成epub有两种方式
+# 1.输出markdown，再用pandoc转换成epub
+> ./FictionDown -i 一世之尊.FictionDown conv -f md
 > pandoc -o 一世之尊.epub 一世之尊.md
+# 2.直接输出epub（某些阅读器会报错）
+> ./FictionDown -i 一世之尊.FictionDown conv -f epub
+```
+
+#### 现在支持小说站内搜索，可以不用手动填入了
+
+```bash
+> ./FictionDown --url https://book.qidian.com/info/3249362 d # 获取正版信息
+
+# 有时会发生`not match volumes`的错误，请启用Chromedp或者PhantomJS
+# Use Chromedp
+> ./FictionDown --url https://book.qidian.com/info/3249362 --driver chromedp d
+# Use PhantomJS
+> ./FictionDown --url https://book.qidian.com/info/3249362 --driver phantomjs d
+
+> ./FictionDown -i 一世之尊.FictionDown s -k 一世之尊 -p # 搜索然后放入
+> ./FictionDown -i 一世之尊.FictionDown d # 获取盗版内容
+# 爬取完毕就可以输出可阅读的文档了
+> ./FictionDown -i 一世之尊.FictionDown conv -f txt
+# 转换成epub有两种方式
+# 1.输出markdown，再用pandoc转换成epub
+> ./FictionDown -i 一世之尊.FictionDown conv -f md
+> pandoc -o 一世之尊.epub 一世之尊.md
+# 2.直接输出epub（某些阅读器会报错）
+> ./FictionDown -i 一世之尊.FictionDown conv -f epub
 ```
 
 ## 未实现
 
 - 爬取起点的时候带上`Cookie`，用于爬取已购买章节
+- 支持 晋江文学城
+- 支持 纵横中文网
 - 支持刺猬猫（即“欢乐书客”）
-- 支持直接输出epub，不需要pandoc
-- 支持小说站内搜索
-- 多线程转换md
+- ~~支持小说站内搜索~~
 - 整理main包中的面条逻辑
 - 整理命令行参数风格
-- 在windows下，md转换到epub时有路径问题
 - 完善广告过滤
 - 简化使用步骤
 - 优化log输出
-- 书本简介也应该为HTML。即`<p>&emsp;&emsp;</p>`而不是现在的用`\t`和`\n`
+- 对于特殊章节，支持手动指定盗版链接或者跳过忽略
+- 外部加载匹配规则，让用户可以自己添加正/盗版源
+- 支持章节更新
+- 章节匹配过程优化
 
 ## 编译
 
 包管理采用godep
 
 1. `dep ensure -v`
-2. `gox github.com/ma6254/FictionDown/cmd/FictionDown`
+2. `make` or `make build` 当前目录下就会产生可执行文件
+
+### 交叉编译
+
+需要安装gox
+
+`make multiple_build`
+
+## 某些匹配问题
+
+小说《一世之尊》
+
+卷: "第三卷 满堂花醉三千客" 章节: "第十四章 姚家小鬼"
+
+在盗版站的章节名均为`"第14章 姚家小鬼"`
+
+
 
 ## 支持的盗版站点
 
-随机挑选了几个，实际上有些过于旧的书和作者频繁修改的书是爬不全的
+随机挑选了几个
 
 - www.biqiuge.com
 - www.biquge5200.cc
@@ -78,6 +142,17 @@
 - 段落最后`\r`
 - 段落最后`rs`
 - `天才一秒记住`
+
+### 删去、谐音、变体
+
+以下几个字被删去
+
+- 发
+- 超
+
+被替换
+
+- 陆 > 6
 
 ### 章节信息
 
